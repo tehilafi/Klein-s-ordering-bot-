@@ -8,8 +8,15 @@ const port = Number(process.env.PORT ?? 3000);
 
 app.use(express.json());
 
+app.get("/", (_req, res) => {
+  res.status(200).send("Klein's Bakery ordering bot is running");
+});
+
 app.get("/health", (_req, res) => {
-  res.json({ ok: true });
+  res.status(200).json({
+    status: "ok",
+    service: "kleins-bakery-ordering-bot",
+  });
 });
 
 app.get("/webhook", (req, res) => {

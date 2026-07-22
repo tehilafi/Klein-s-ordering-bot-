@@ -1,0 +1,29 @@
+{
+  "name": "ordering-bot",
+  "version": "1.0.0",
+  "description": "Kleins Bakery WhatsApp ordering bot",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/index.ts",
+    "dev:cli": "ts-node src/cli.ts",
+    "test": "jest --runInBand"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^26.1.1",
+    "jest": "^30.4.2",
+    "ts-jest": "^29.4.11",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}

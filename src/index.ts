@@ -33,12 +33,34 @@ app.get("/webhook", (req, res) => {
 });
 
 app.post("/webhook", async (req, res) => {
+  console.log("POST /webhook received");
+  console.log("Webhook body type:", req.body?.object);
+
   try {
     const parsed = parseWhatsAppMessage(req.body);
+
+    console.log("Parsed WhatsApp message:", {
+      parsed: Boolean(parsed),
+      phoneNumber: parsed?.phoneNumber,
+      messageType: parsed?.message?.type,
+    });
+
     if (parsed) {
-      const responses = await handleIncomingMessage(parsed.phoneNumber, parsed.message);
-      await sendWhatsAppResponses(parsed.phoneNumber, responses);
+      const responses = await handleIncomingMessage(
+        parsed.phoneNumber,
+        parsed.message
+      );
+
+      console.log("Bot responses created:", responses.length);
+
+      await sendWhatsAppResponses(
+        parsed.phoneNumber,
+        responses
+      );
+
+      console.log("WhatsApp responses sent successfully");
     }
+
     res.sendStatus(200);
   } catch (error) {
     console.error("עיבוד ה-Webhook נכשל", error);

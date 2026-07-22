@@ -19,6 +19,35 @@ app.get("/health", (_req, res) => {
   });
 });
 
+app.get("/privacy", (_req, res) => {
+  res.type("html").status(200).send(`
+    <!doctype html>
+    <html lang="he" dir="rtl">
+      <head>
+        <meta charset="utf-8" />
+        <title>מדיניות פרטיות - מאפיית קליינס</title>
+      </head>
+      <body>
+        <h1>מדיניות פרטיות</h1>
+        <p>
+          הבוט משמש את עובדי מאפיית קליינס להזנת הזמנות שהתקבלו בטלפון.
+        </p>
+        <p>
+          פרטי ההזמנה נשמרים באופן זמני בזיכרון השרת במהלך השיחה בלבד
+          ואינם נשמרים במסד נתונים.
+        </p>
+        <p>
+          מידע אינו נמכר או מועבר לצדדים שלישיים, למעט השירותים הטכניים
+          הנדרשים להפעלת WhatsApp והשרת.
+        </p>
+        <p>
+          לבקשות בנושא פרטיות ניתן לפנות למאפיית קליינס.
+        </p>
+      </body>
+    </html>
+  `);
+});
+
 app.get("/webhook", (req, res) => {
   const mode = req.query["hub.mode"];
   const token = req.query["hub.verify_token"];
@@ -50,7 +79,7 @@ app.post("/webhook", async (req, res) => {
     if (parsed) {
       const responses = await handleIncomingMessage(
         parsed.phoneNumber,
-        parsed.message
+        parsed.message,
       );
 
       console.log("Bot responses generated", {
@@ -58,10 +87,7 @@ app.post("/webhook", async (req, res) => {
         types: responses.map((response) => response.type),
       });
 
-      await sendWhatsAppResponses(
-        parsed.phoneNumber,
-        responses
-      );
+      await sendWhatsAppResponses(parsed.phoneNumber, responses);
     }
 
     res.sendStatus(200);

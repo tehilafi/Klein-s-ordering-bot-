@@ -33,16 +33,18 @@ app.get("/webhook", (req, res) => {
 });
 
 app.post("/webhook", async (req, res) => {
-  console.log("POST /webhook received");
-  console.log("Webhook body type:", req.body?.object);
+  console.log("POST /webhook received", {
+    object: req.body?.object,
+    hasEntry: Boolean(req.body?.entry?.length),
+  });
 
   try {
     const parsed = parseWhatsAppMessage(req.body);
 
-    console.log("Parsed WhatsApp message:", {
+    console.log("Webhook parse result", {
       parsed: Boolean(parsed),
       phoneNumber: parsed?.phoneNumber,
-      messageType: parsed?.message?.type,
+      messageType: parsed?.message.type,
     });
 
     if (parsed) {
@@ -51,14 +53,15 @@ app.post("/webhook", async (req, res) => {
         parsed.message
       );
 
-      console.log("Bot responses created:", responses.length);
+      console.log("Bot responses generated", {
+        count: responses.length,
+        types: responses.map((response) => response.type),
+      });
 
       await sendWhatsAppResponses(
         parsed.phoneNumber,
         responses
       );
-
-      console.log("WhatsApp responses sent successfully");
     }
 
     res.sendStatus(200);

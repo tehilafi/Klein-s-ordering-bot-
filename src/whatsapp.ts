@@ -28,27 +28,61 @@ export function parseWhatsAppMessage(body: unknown): { phoneNumber: string; mess
   };
 }
 
-export async function sendWhatsAppResponses(phoneNumber: string, responses: BotResponse[]): Promise<void> {
+export async function sendWhatsAppResponses(
+  phoneNumber: string,
+  responses: BotResponse[]
+): Promise<void> {
   const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
 
   if (!accessToken || !phoneNumberId) {
-    console.log(`Responses for ${phoneNumber}:`, JSON.stringify(responses, null, 2));
+    console.error("Missing WhatsApp environment variables", {
+      hasAccessToken: Boolean(accessToken),
+      hasPhoneNumberId: Boolean(phoneNumberId),
+    });
     return;
   }
 
   for (const response of responses) {
-    await fetch(`https://graph.facebook.com/v20.0/${phoneNumberId}/messages`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(toWhatsAppPayload(phoneNumber, response)),
+    const payload = toWhatsAppPayload(phoneNumber, response);
+
+    console.log("Sending WhatsApp response", {
+      phoneNumber,
+      responseType: response.type,
+      phoneNumberId,
+    });
+
+    const apiResponse = await fetch(
+      `https://graph.facebook.com/v25.0/${phoneNumberId}/messages`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      }
+    );
+
+    const responseBody = await apiResponse.text();
+
+    if (!apiResponse.ok) {
+      console.error("WhatsApp API rejected the message", {
+        status: apiResponse.status,
+        body: responseBody,
+      });
+
+      throw new Error(
+        `WhatsApp API error ${apiResponse.status}: ${responseBody}`
+      );
+    }
+
+    console.log("WhatsApp message sent successfully", {
+      status: apiResponse.status,
+      body: responseBody,
     });
   }
 }
-
 function toWhatsAppPayload(phoneNumber: string, response: BotResponse): Record<string, unknown> {
   if (response.type === "buttons" && response.buttons && response.buttons.length > 3) {
     return {

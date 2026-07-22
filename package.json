@@ -7,12 +7,16 @@
     "build": "tsc",
     "dev": "ts-node src/index.ts",
     "dev:cli": "ts-node src/cli.ts",
+    "start": "node dist/index.js",
     "test": "jest --runInBand"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "dotenv": "^17.4.2",
     "express": "^5.2.1"

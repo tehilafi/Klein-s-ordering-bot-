@@ -1,10 +1,10 @@
-# Kleins Bakery WhatsApp Ordering Bot
+# בוט הזמנות וואטסאפ למאפיית קליינס
 
-A simple Node.js, TypeScript, Express, and Jest ordering bot for Kleins Bakery.
+בוט פשוט להזמנות דרך WhatsApp Business Cloud API, בנוי עם Node.js, TypeScript, Express ו-Jest.
 
-The bot stores active conversations only in memory with a `Map`, uses a local TypeScript product catalog, calculates delivery from the entered address, and clears sessions when orders are cancelled or completed.
+הפרויקט לא משתמש במסד נתונים. הזמנות פעילות נשמרות זמנית בזיכרון באמצעות `Map`, ונמחקות אחרי השלמת הזמנה או ביטול.
 
-## Setup
+## התקנה מקומית
 
 ```bash
 npm install
@@ -12,34 +12,58 @@ cp .env.example .env
 npm test
 ```
 
-## Local CLI Mode
+## הרצה מקומית
 
-```bash
-npm run dev:cli
-```
-
-The CLI uses the same conversation service as the WhatsApp webhook. Enter `1` at the welcome screen to simulate the `START_ORDER` button.
-
-## Express Webhook
+שרת Express:
 
 ```bash
 npm run dev
 ```
 
-Configure WhatsApp Cloud API webhook verification with:
+מצב CLI לבדיקה בלי וואטסאפ:
 
-- `GET /webhook`
-- verify token from `WHATSAPP_VERIFY_TOKEN`
+```bash
+npm run dev:cli
+```
 
-Incoming messages should be sent to:
+## פריסה ל-Render
 
-- `POST /webhook`
+הפרויקט כולל קובץ `render.yaml`, כך שאפשר לחבר את הריפו ל-Render כ-Blueprint או ליצור Web Service רגיל עם אותם ערכים.
 
-The webhook parses text messages, button replies, and list replies, then routes them through `handleIncomingMessage`.
+הגדרות השירות:
 
-To send real WhatsApp responses, set:
+- Runtime: `Node`
+- Build Command: `npm ci && npm run build`
+- Start Command: `npm start`
+- Health Check Path: `/health`
 
+השרת משתמש ב-`process.env.PORT`, ו-Render מספק את הערך הזה אוטומטית.
+
+## משתני סביבה ב-Render
+
+להגדיר ב-Render תחת Environment:
+
+- `WHATSAPP_VERIFY_TOKEN`
 - `WHATSAPP_ACCESS_TOKEN`
 - `WHATSAPP_PHONE_NUMBER_ID`
 
-When these values are omitted, responses are printed to the server console without card details.
+לא להעלות את `.env` לגיט. הקובץ כבר מוחרג ב-`.gitignore`.
+
+## חיבור Webhook ב-Meta
+
+אחרי הפריסה, Render ייתן כתובת בסגנון:
+
+```text
+https://your-service-name.onrender.com
+```
+
+ב-Meta WhatsApp Cloud API יש להגדיר:
+
+- Callback URL: `https://your-service-name.onrender.com/webhook`
+- Verify Token: אותו ערך שהוגדר ב-`WHATSAPP_VERIFY_TOKEN`
+
+בדיקת זמינות:
+
+```text
+https://your-service-name.onrender.com/health
+```

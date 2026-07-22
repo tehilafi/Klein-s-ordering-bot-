@@ -31,5 +31,5 @@ export function calculateOrderTotal(items: OrderItem[], deliveryPriceAgorot: num
 }
 
 export function formatAgorot(amount: number): string {
-  return `${(amount / 100).toFixed(2)} ILS`;
+  return `${(amount / 100).toFixed(2)} ש"ח`;
 }

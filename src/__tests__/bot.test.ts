@@ -1,4 +1,4 @@
-import { activeOrders, CONTINUE_ORDER, FINISH_PRODUCTS, handleIncomingMessage, START_ORDER, USE_THIS_PHONE } from "../conversation";
+import { activeOrders, CONTINUE_ORDER, FINISH_PRODUCTS, handleIncomingMessage, START_ORDER } from "../conversation";
 import { getDeliveryPrice, isBeitShemeshAddress } from "../domain/delivery";
 import { validateCardNumber, validateCvv, validateExpiry } from "../domain/payment";
 import { calculateItemTotal, calculateOrderTotal, getSuggestedQuantities, validateQuantity } from "../domain/pricing";
@@ -20,7 +20,7 @@ describe("conversation start", () => {
     });
 
     expect(activeOrders.get(phoneNumber)?.step).toBe("WAITING_FOR_NAME");
-    expect(responses[0].text).toContain("What name");
+    expect(responses[0].text).toContain("על שם מי");
   });
 
   test("random first message does not skip the start button", async () => {
@@ -41,6 +41,35 @@ describe("product search and pricing", () => {
 
   test("searches for a product using an alias", () => {
     expect(searchProducts("פרנות").map((product) => product.id)).toContain("pair-of-frenas");
+  });
+
+  test("product selection response does not duplicate product rows in the message text", async () => {
+    await handleIncomingMessage(phoneNumber, { type: "button", interactiveId: START_ORDER });
+    await handleIncomingMessage(phoneNumber, { type: "text", text: "ישראל ישראלי" });
+    await handleIncomingMessage(phoneNumber, { type: "text", text: "25/07/2026 בשעה 10:00" });
+    await handleIncomingMessage(phoneNumber, { type: "text", text: "בית שמש, נהר הירדן 15" });
+    const responses = await handleIncomingMessage(phoneNumber, { type: "text", text: "בורגר" });
+
+    expect(responses[0].text).toBe("בחרי את המוצר הרצוי.");
+    expect(responses[0].options?.length).toBe(3);
+  });
+
+  test("cart action buttons are ordered for editing first", async () => {
+    await handleIncomingMessage(phoneNumber, { type: "button", interactiveId: START_ORDER });
+    await handleIncomingMessage(phoneNumber, { type: "text", text: "ישראל ישראלי" });
+    await handleIncomingMessage(phoneNumber, { type: "text", text: "25/07/2026 בשעה 10:00" });
+    await handleIncomingMessage(phoneNumber, { type: "text", text: "בית שמש, נהר הירדן 15" });
+    await handleIncomingMessage(phoneNumber, { type: "text", text: "בורגר" });
+    await handleIncomingMessage(phoneNumber, { type: "text", text: "3" });
+    const responses = await handleIncomingMessage(phoneNumber, { type: "text", text: "80" });
+
+    expect(responses[0].buttons?.map((button) => button.title)).toEqual([
+      "שינוי כמות",
+      "הסרת מוצר",
+      "הוספת מוצר",
+      "צפייה בסל",
+      "סיום בחירת מוצרים",
+    ]);
   });
 
   test("validates carton quantities", () => {
@@ -156,10 +185,10 @@ describe("order completion", () => {
     await handleIncomingMessage(phoneNumber, { type: "text", text: "4242 4242 4242 4242" });
     await handleIncomingMessage(phoneNumber, { type: "text", text: "12/99" });
     await handleIncomingMessage(phoneNumber, { type: "text", text: "999" });
-    const responses = await handleIncomingMessage(phoneNumber, { type: "button", interactiveId: USE_THIS_PHONE });
+    const responses = await handleIncomingMessage(phoneNumber, { type: "text", text: "050-1234567" });
 
     expect(activeOrders.has(phoneNumber)).toBe(false);
-    expect(responses[0].text).toContain("Card ending in 4242");
+    expect(responses[0].text).toContain("כרטיס המסתיים ב-4242");
     expect(responses[0].text).not.toContain("4242 4242 4242 4242");
     expect(responses[0].text).not.toContain("999");
   });

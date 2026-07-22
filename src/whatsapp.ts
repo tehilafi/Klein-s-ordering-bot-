@@ -50,6 +50,30 @@ export async function sendWhatsAppResponses(phoneNumber: string, responses: BotR
 }
 
 function toWhatsAppPayload(phoneNumber: string, response: BotResponse): Record<string, unknown> {
+  if (response.type === "buttons" && response.buttons && response.buttons.length > 3) {
+    return {
+      messaging_product: "whatsapp",
+      to: phoneNumber,
+      type: "interactive",
+      interactive: {
+        type: "list",
+        body: { text: response.text },
+        action: {
+          button: "בחירה",
+          sections: [
+            {
+              title: "פעולות",
+              rows: response.buttons.slice(0, 10).map((button) => ({
+                id: button.id,
+                title: button.title.slice(0, 24),
+              })),
+            },
+          ],
+        },
+      },
+    };
+  }
+
   if (response.type === "buttons" && response.buttons?.length) {
     return {
       messaging_product: "whatsapp",
@@ -77,10 +101,10 @@ function toWhatsAppPayload(phoneNumber: string, response: BotResponse): Record<s
         type: "list",
         body: { text: response.text },
         action: {
-          button: "Select",
+          button: "בחירה",
           sections: [
             {
-              title: "Products",
+              title: "מוצרים",
               rows: response.options.slice(0, 10).map((option) => ({
                 id: option.id,
                 title: option.title.slice(0, 24),

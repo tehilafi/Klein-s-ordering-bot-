@@ -34,11 +34,11 @@ app.post("/webhook", async (req, res) => {
     }
     res.sendStatus(200);
   } catch (error) {
-    console.error("Webhook processing failed", error);
+    console.error("עיבוד ה-Webhook נכשל", error);
     res.sendStatus(500);
   }
 });
 
 app.listen(port, () => {
-  console.log(`Kleins Bakery bot listening on port ${port}`);
+  console.log(`הבוט של מאפיית קליינס מאזין בפורט ${port}`);
 });

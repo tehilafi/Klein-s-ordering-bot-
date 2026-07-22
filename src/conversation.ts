@@ -28,8 +28,8 @@ export const activeOrders = new Map<string, OrderSession>();
 
 const welcomeResponse = (): BotResponse => ({
   type: "buttons",
-  text: "Welcome to Kleins Bakery 🍞\nYou can place an order quickly through the WhatsApp bot.",
-  buttons: [{ id: START_ORDER, title: "Start Order" }],
+  text: "ברוכה הבאה למאפיית קליינס 🍞\nאפשר לבצע הזמנה במהירות דרך בוט הוואטסאפ.",
+  buttons: [{ id: START_ORDER, title: "התחלת הזמנה" }],
 });
 
 function textResponse(text: string): BotResponse {
@@ -48,6 +48,10 @@ function isAction(input: string, action: string, label: string): boolean {
   return input.toUpperCase() === action || input.toLowerCase() === label.toLowerCase();
 }
 
+function isAnyAction(input: string, action: string, labels: string[]): boolean {
+  return input.toUpperCase() === action || labels.some((label) => input.toLowerCase() === label.toLowerCase());
+}
+
 function pushStep(session: OrderSession, step: ConversationStep): void {
   if (session.step !== step) {
     session.stepHistory.push(session.step);
@@ -56,27 +60,27 @@ function pushStep(session: OrderSession, step: ConversationStep): void {
 }
 
 function promptForProduct(): BotResponse {
-  return buttonsResponse("Which product would you like to order?\nStart typing the product name.", [
-    { id: VIEW_CART, title: "View Cart" },
-    { id: CANCEL_ORDER, title: "Cancel" },
+  return buttonsResponse("איזה מוצר תרצי להזמין?\nהתחילי להקליד את שם המוצר.", [
+    { id: VIEW_CART, title: "צפייה בסל" },
+    { id: CANCEL_ORDER, title: "ביטול" },
   ]);
 }
 
 function cartActions(text: string): BotResponse {
   return buttonsResponse(text, [
-    { id: ADD_PRODUCT, title: "Add Another Product" },
-    { id: VIEW_CART, title: "View Cart" },
-    { id: FINISH_PRODUCTS, title: "Finish Product Selection" },
-    { id: REMOVE_PRODUCT, title: "Remove Product" },
-    { id: CHANGE_QUANTITY, title: "Change Quantity" },
+    { id: CHANGE_QUANTITY, title: "שינוי כמות" },
+    { id: REMOVE_PRODUCT, title: "הסרת מוצר" },
+    { id: ADD_PRODUCT, title: "הוספת מוצר" },
+    { id: VIEW_CART, title: "צפייה בסל" },
+    { id: FINISH_PRODUCTS, title: "סיום בחירת מוצרים" },
   ]);
 }
 
 function orderConfirmation(order: OrderSession): BotResponse {
   return buttonsResponse(buildOrderSummary(order), [
-    { id: CONTINUE_ORDER, title: "Continue" },
-    { id: EDIT_ORDER, title: "Edit Order" },
-    { id: CANCEL_ORDER, title: "Cancel Order" },
+    { id: CONTINUE_ORDER, title: "המשך" },
+    { id: EDIT_ORDER, title: "עריכת הזמנה" },
+    { id: CANCEL_ORDER, title: "ביטול הזמנה" },
   ]);
 }
 
@@ -114,24 +118,24 @@ function removeSensitiveCardFields(session: OrderSession): void {
 function handleBack(session: OrderSession): BotResponse {
   const previousStep = session.stepHistory.pop();
   if (!previousStep) {
-    return textResponse("There is no previous step to return to.");
+    return textResponse("אין שלב קודם לחזור אליו.");
   }
 
   session.step = previousStep;
-  return textResponse(`Returned to previous step: ${previousStep}.`);
+  return textResponse("חזרנו לשלב הקודם.");
 }
 
 function handleGlobalAction(phoneNumber: string, input: string, session: OrderSession): BotResponse[] | undefined {
-  if (isAction(input, CANCEL_ORDER, "cancel") || input.toLowerCase() === "cancel order") {
+  if (isAnyAction(input, CANCEL_ORDER, ["cancel", "cancel order", "ביטול", "בטל", "ביטול הזמנה"])) {
     resetOrder(phoneNumber);
-    return [buttonsResponse("Your order was cancelled.", [{ id: START_ORDER, title: "Start Order" }])];
+    return [buttonsResponse("ההזמנה בוטלה.", [{ id: START_ORDER, title: "התחלת הזמנה" }])];
   }
 
-  if (input.toLowerCase() === "cart" || isAction(input, VIEW_CART, "view cart")) {
+  if (isAnyAction(input, VIEW_CART, ["cart", "view cart", "סל", "צפייה בסל", "הצג סל"])) {
     return [textResponse(buildCartSummary(session))];
   }
 
-  if (input.toLowerCase() === "back") {
+  if (["back", "חזרה", "אחורה"].includes(input.toLowerCase())) {
     return [handleBack(session)];
   }
 
@@ -148,7 +152,7 @@ function addOrMergeItem(session: OrderSession, quantity: number): BotResponse {
   const existingItem = session.items.find((item) => item.productId === product.id);
   const mergedQuantity = (existingItem?.quantity ?? 0) + quantity;
   if (!validateQuantity(product, mergedQuantity)) {
-    return textResponse(`The merged quantity would be ${mergedQuantity}, which is not valid for ${product.name}. Please enter another quantity.`);
+    return textResponse(`הכמות הכוללת תהיה ${mergedQuantity}, והיא אינה תקינה עבור ${product.name}. נא להזין כמות אחרת.`);
   }
 
   const totalPriceAgorot = calculateItemTotal(product, mergedQuantity);
@@ -171,12 +175,12 @@ function addOrMergeItem(session: OrderSession, quantity: number): BotResponse {
 
   const lineTotal = existingItem?.totalPriceAgorot ?? calculateItemTotal(product, quantity);
   return cartActions([
-    "The product was added to the order.",
+    "המוצר נוסף להזמנה.",
     "",
     product.name,
-    `Quantity: ${existingItem?.quantity ?? quantity}`,
-    `Unit price: ${formatAgorot(product.priceAgorot)}`,
-    `Line total: ${formatAgorot(lineTotal)}`,
+    `כמות: ${existingItem?.quantity ?? quantity}`,
+    `מחיר יחידה: ${formatAgorot(product.priceAgorot)}`,
+    `סה"כ לשורה: ${formatAgorot(lineTotal)}`,
   ].join("\n"));
 }
 
@@ -188,7 +192,7 @@ export async function handleIncomingMessage(
 
   if (message.interactiveId === START_ORDER) {
     startNewOrder(phoneNumber);
-    return [textResponse("What name should be used for the order?")];
+    return [textResponse("על שם מי לרשום את ההזמנה?")];
   }
 
   const session = getOrWelcome(phoneNumber);
@@ -199,7 +203,7 @@ export async function handleIncomingMessage(
   if (session.step === "WAITING_FOR_START_BUTTON") {
     if (input === "1") {
       startNewOrder(phoneNumber);
-      return [textResponse("What name should be used for the order?")];
+      return [textResponse("על שם מי לרשום את ההזמנה?")];
     }
     return [welcomeResponse()];
   }
@@ -213,25 +217,25 @@ export async function handleIncomingMessage(
     case "WAITING_FOR_NAME": {
       const name = cleanFreeText(input);
       if (name.length < 2) {
-        return [textResponse("Please enter a name with at least two characters.")];
+        return [textResponse("נא להזין שם באורך של לפחות שני תווים.")];
       }
       session.customerName = name;
       pushStep(session, "WAITING_FOR_DATE");
-      return [textResponse("For what date and time is the order needed?")];
+      return [textResponse("לאיזה תאריך ושעה ההזמנה דרושה?")];
     }
     case "WAITING_FOR_DATE": {
       const requestedDate = cleanFreeText(input);
       if (!requestedDate) {
-        return [textResponse("Please enter the requested date and time.")];
+        return [textResponse("נא להזין תאריך ושעה מבוקשים.")];
       }
       session.requestedDate = requestedDate;
       pushStep(session, "WAITING_FOR_ADDRESS");
-      return [textResponse("Please enter the delivery city, street, and building number.")];
+      return [textResponse("נא להזין עיר, רחוב ומספר בניין למשלוח.")];
     }
     case "WAITING_FOR_ADDRESS": {
       const address = cleanFreeText(input);
       if (!address) {
-        return [textResponse("Please enter the delivery city, street, and building number.")];
+        return [textResponse("נא להזין עיר, רחוב ומספר בניין למשלוח.")];
       }
       session.address = address;
       session.isBeitShemesh = isBeitShemeshAddress(address);
@@ -239,7 +243,7 @@ export async function handleIncomingMessage(
       pushStep(session, "WAITING_FOR_PRODUCT_SEARCH");
       return [
         textResponse(
-          `The address was identified as being ${session.isBeitShemesh ? "in Beit Shemesh" : "outside Beit Shemesh"}.\nDelivery price: ${formatAgorot(session.deliveryPriceAgorot)}`,
+          `הכתובת זוהתה כ${session.isBeitShemesh ? "כתובת בבית שמש" : "כתובת מחוץ לבית שמש"}.\nמחיר משלוח: ${formatAgorot(session.deliveryPriceAgorot)}`,
         ),
         promptForProduct(),
       ];
@@ -247,19 +251,17 @@ export async function handleIncomingMessage(
     case "WAITING_FOR_PRODUCT_SEARCH": {
       const results = searchProducts(input);
       if (results.length === 0) {
-        return [textResponse("No matching products were found. Please try another product name.")];
+        return [textResponse("לא נמצאו מוצרים מתאימים. נסי שם מוצר אחר.")];
       }
       session.searchResults = results;
       pushStep(session, "WAITING_FOR_PRODUCT_SELECTION");
       return [{
         type: "list",
-        text: `Matching products:\n\n${results
-          .map((product, index) => `${index + 1}. ${product.name} - ${formatAgorot(product.priceAgorot)} per ${product.pricingUnit}${product.soldInMultiples ? ` - sold in multiples of ${product.packageSize}` : ""}`)
-          .join("\n")}\n\nSelect the required product.`,
+        text: "בחרי את המוצר הרצוי.",
         options: results.map((product, index) => ({
           id: product.id,
           title: `${index + 1}. ${product.name}`,
-          description: `${formatAgorot(product.priceAgorot)} per ${product.pricingUnit}`,
+          description: `${formatAgorot(product.priceAgorot)}`,
         })),
       }];
     }
@@ -268,53 +270,53 @@ export async function handleIncomingMessage(
         findProductById(input) ??
         session.searchResults?.[Number(input) - 1];
       if (!selected) {
-        return [textResponse("Please select one of the matching products by number.")];
+        return [textResponse("נא לבחור אחד מהמוצרים המתאימים לפי מספר.")];
       }
       session.selectedProduct = selected;
       pushStep(session, "WAITING_FOR_QUANTITY");
-      return [textResponse(`How many units of ${selected.name} would you like to order?`)];
+      return [textResponse(`כמה יחידות של ${selected.name} תרצי להזמין?`)];
     }
     case "WAITING_FOR_QUANTITY": {
       const quantity = Number(input);
       const product = session.selectedProduct;
       if (!product || !Number.isInteger(quantity) || quantity <= 0) {
-        return [textResponse("Please enter a positive whole-number quantity.")];
+        return [textResponse("נא להזין כמות חיובית במספר שלם.")];
       }
       if (!validateQuantity(product, quantity)) {
         const suggestions = getSuggestedQuantities(product.packageSize, quantity);
-        return [textResponse(`${quantity} units cannot be ordered for ${product.name}.\n\nThis product is sold only in multiples of ${product.packageSize}.\n\nNearby valid quantities:\n${suggestions.map((value) => `${value} units`).join("\n")}\n\nPlease enter another quantity.`)];
+        return [textResponse(`לא ניתן להזמין ${quantity} יחידות של ${product.name}.\n\nהמוצר נמכר רק בכפולות של ${product.packageSize}.\n\nכמויות תקינות קרובות:\n${suggestions.map((value) => `${value} יחידות`).join("\n")}\n\nנא להזין כמות אחרת.`)];
       }
       return [addOrMergeItem(session, quantity)];
     }
     case "WAITING_FOR_CART_ACTION": {
-      if (isAction(input, ADD_PRODUCT, "add another product")) {
+      if (isAnyAction(input, ADD_PRODUCT, ["add another product", "הוספת מוצר", "הוסף מוצר", "עוד מוצר"])) {
         pushStep(session, "WAITING_FOR_PRODUCT_SEARCH");
         return [promptForProduct()];
       }
-      if (isAction(input, FINISH_PRODUCTS, "finish product selection")) {
+      if (isAnyAction(input, FINISH_PRODUCTS, ["finish product selection", "סיום בחירת מוצרים", "סיום", "סיימתי"])) {
         if (session.items.length === 0) {
-          return [textResponse("Please add at least one product before continuing.")];
+          return [textResponse("נא להוסיף לפחות מוצר אחד לפני שממשיכים.")];
         }
         pushStep(session, "WAITING_FOR_ORDER_CONFIRMATION");
         return [orderConfirmation(session)];
       }
-      if (isAction(input, REMOVE_PRODUCT, "remove product")) {
+      if (isAnyAction(input, REMOVE_PRODUCT, ["remove product", "הסרת מוצר", "הסר מוצר"])) {
         const removed = session.items.pop();
-        return [cartActions(removed ? `Removed ${removed.productName}.` : "Your cart is already empty.")];
+        return [cartActions(removed ? `${removed.productName} הוסר מהסל.` : "הסל שלך כבר ריק.")];
       }
-      if (isAction(input, CHANGE_QUANTITY, "change quantity")) {
+      if (isAnyAction(input, CHANGE_QUANTITY, ["change quantity", "שינוי כמות", "שנה כמות"])) {
         session.items.pop();
         pushStep(session, "WAITING_FOR_PRODUCT_SEARCH");
         return [promptForProduct()];
       }
-      return [cartActions("Please choose an order action.")];
+      return [cartActions("נא לבחור פעולה להזמנה.")];
     }
     case "WAITING_FOR_ORDER_CONFIRMATION": {
-      if (isAction(input, CONTINUE_ORDER, "continue")) {
+      if (isAnyAction(input, CONTINUE_ORDER, ["continue", "המשך", "להמשיך"])) {
         pushStep(session, "WAITING_FOR_CARD_NUMBER");
-        return [textResponse("Please enter the credit card number.")];
+        return [textResponse("נא להזין מספר כרטיס אשראי.")];
       }
-      if (isAction(input, EDIT_ORDER, "edit order")) {
+      if (isAnyAction(input, EDIT_ORDER, ["edit order", "עריכת הזמנה", "עריכה"])) {
         pushStep(session, "WAITING_FOR_PRODUCT_SEARCH");
         return [promptForProduct()];
       }
@@ -322,54 +324,51 @@ export async function handleIncomingMessage(
     }
     case "WAITING_FOR_CARD_NUMBER": {
       if (!validateCardNumber(input)) {
-        return [textResponse("Please enter a valid credit card number.")];
+        return [textResponse("נא להזין מספר כרטיס אשראי תקין.")];
       }
       const normalizedCard = normalizeCardNumber(input);
       session.cardNumber = normalizedCard;
       session.cardLastFourDigits = normalizedCard.slice(-4);
       pushStep(session, "WAITING_FOR_CARD_EXPIRY");
-      return [textResponse("Please enter the card expiry in MM/YY format.")];
+      return [textResponse("נא להזין תוקף כרטיס בפורמט MM/YY.")];
     }
     case "WAITING_FOR_CARD_EXPIRY": {
       if (!validateExpiry(input)) {
-        return [textResponse("Please enter a valid future expiry in MM/YY format.")];
+        return [textResponse("נא להזין תוקף עתידי תקין בפורמט MM/YY.")];
       }
       session.cardExpiry = input;
       pushStep(session, "WAITING_FOR_CARD_CVV");
-      return [textResponse("Please enter the three digits from the back of the card.")];
+      return [textResponse("נא להזין את שלוש הספרות בגב הכרטיס.")];
     }
     case "WAITING_FOR_CARD_CVV": {
       if (!validateCvv(input)) {
-        return [textResponse("Please enter a valid 3 or 4 digit CVV.")];
+        return [textResponse("נא להזין קוד CVV תקין בן 3 או 4 ספרות.")];
       }
       session.cardCvv = input;
-      pushStep(session, "WAITING_FOR_PHONE_CONFIRMATION");
-      return [buttonsResponse("Should we use your WhatsApp number as the contact number?", [
-        { id: USE_THIS_PHONE, title: "Use This Number" },
-        { id: ENTER_OTHER_PHONE, title: "Enter Another Number" },
-      ])];
+      pushStep(session, "WAITING_FOR_ALTERNATIVE_PHONE");
+      return [textResponse("מספר טלפון ליצירת קשר:")];
     }
     case "WAITING_FOR_PHONE_CONFIRMATION": {
-      if (isAction(input, USE_THIS_PHONE, "use this number")) {
+      if (isAnyAction(input, USE_THIS_PHONE, ["use this number", "שימוש במספר הזה", "כן"])) {
         session.phone = phoneNumber;
         const report = buildFinalOrderReport(session);
         removeSensitiveCardFields(session);
         resetOrder(phoneNumber);
         return [textResponse(report), welcomeResponse()];
       }
-      if (isAction(input, ENTER_OTHER_PHONE, "enter another number")) {
+      if (isAnyAction(input, ENTER_OTHER_PHONE, ["enter another number", "הזנת מספר אחר", "מספר אחר"])) {
         pushStep(session, "WAITING_FOR_ALTERNATIVE_PHONE");
-        return [textResponse("Please enter the contact phone number.")];
+        return [textResponse("מספר טלפון ליצירת קשר:")];
       }
-      return [buttonsResponse("Should we use your WhatsApp number as the contact number?", [
-        { id: USE_THIS_PHONE, title: "Use This Number" },
-        { id: ENTER_OTHER_PHONE, title: "Enter Another Number" },
+      return [buttonsResponse("האם להשתמש במספר הוואטסאפ שלך כמספר ליצירת קשר?", [
+        { id: USE_THIS_PHONE, title: "שימוש במספר הזה" },
+        { id: ENTER_OTHER_PHONE, title: "הזנת מספר אחר" },
       ])];
     }
     case "WAITING_FOR_ALTERNATIVE_PHONE": {
       const digits = input.replace(/\D/g, "");
       if (digits.length < 7 || digits.length > 15) {
-        return [textResponse("Please enter a valid phone number.")];
+        return [textResponse("נא להזין מספר טלפון תקין.")];
       }
       session.phone = input;
       const report = buildFinalOrderReport(session);

@@ -7,13 +7,13 @@ function subtotal(order: OrderSession): number {
 
 export function buildCartSummary(order: OrderSession): string {
   if (order.items.length === 0) {
-    return "Your cart is empty.";
+    return "הסל שלך ריק.";
   }
 
   return order.items
     .map(
       (item, index) =>
-        `${index + 1}. ${item.productName}\nQuantity: ${item.quantity}\nUnit price: ${formatAgorot(item.unitPriceAgorot)}\nTotal: ${formatAgorot(item.totalPriceAgorot)}`,
+        `${index + 1}. ${item.productName}\nכמות: ${item.quantity}\nמחיר יחידה: ${formatAgorot(item.unitPriceAgorot)}\nסה"כ: ${formatAgorot(item.totalPriceAgorot)}`,
     )
     .join("\n\n");
 }
@@ -24,41 +24,41 @@ export function buildOrderSummary(order: OrderSession): string {
   const finalTotalAgorot = calculateOrderTotal(order.items, deliveryPriceAgorot);
 
   return [
-    "Order Summary:",
+    "סיכום הזמנה:",
     "",
     buildCartSummary(order),
     "",
-    `Products subtotal: ${formatAgorot(productsSubtotalAgorot)}`,
-    `Delivery: ${formatAgorot(deliveryPriceAgorot)}`,
+    `סכום ביניים למוצרים: ${formatAgorot(productsSubtotalAgorot)}`,
+    `משלוח: ${formatAgorot(deliveryPriceAgorot)}`,
     "",
-    `Final total: ${formatAgorot(finalTotalAgorot)}`,
+    `סה"כ לתשלום: ${formatAgorot(finalTotalAgorot)}`,
   ].join("\n");
 }
 
 export function buildFinalOrderReport(order: OrderSession): string {
   return [
-    "Order completed successfully ✅",
+    "ההזמנה הושלמה בהצלחה ✅",
     "",
-    "Customer details:",
-    `Name: ${order.customerName ?? ""}`,
-    `Phone: ${order.phone ?? ""}`,
+    "פרטי לקוח:",
+    `שם: ${order.customerName ?? ""}`,
+    `טלפון: ${order.phone ?? ""}`,
     "",
-    "Requested date and time:",
+    "תאריך ושעה מבוקשים:",
     order.requestedDate ?? "",
     "",
-    "Delivery address:",
+    "כתובת משלוח:",
     order.address ?? "",
     "",
-    "Products:",
+    "מוצרים:",
     "",
     buildCartSummary(order),
     "",
-    `Products subtotal: ${formatAgorot(subtotal(order))}`,
-    `Delivery: ${formatAgorot(order.deliveryPriceAgorot ?? 0)}`,
+    `סכום ביניים למוצרים: ${formatAgorot(subtotal(order))}`,
+    `משלוח: ${formatAgorot(order.deliveryPriceAgorot ?? 0)}`,
     "",
-    `Final total: ${formatAgorot(calculateOrderTotal(order.items, order.deliveryPriceAgorot ?? 0))}`,
+    `סה"כ לתשלום: ${formatAgorot(calculateOrderTotal(order.items, order.deliveryPriceAgorot ?? 0))}`,
     "",
-    "Payment details:",
-    `Card ending in ${order.cardLastFourDigits ?? ""}`,
+    "פרטי תשלום:",
+    `כרטיס המסתיים ב-${order.cardLastFourDigits ?? ""}`,
   ].join("\n");
 }
